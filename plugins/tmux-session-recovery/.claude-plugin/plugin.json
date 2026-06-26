@@ -1,0 +1,11 @@
+{
+  "name": "tmux-session-recovery",
+  "description": "Record which Claude Code session id runs in each tmux pane, so an unexpected tmux restart no longer loses the pane-to-session mapping. A SessionStart hook stamps the pane with its session id and appends a positional log row; a companion reader maps restored panes back to their `claude --resume <id>` by pane position, which disambiguates even when many sessions share one working directory.",
+  "author": {
+    "name": "dabd"
+  },
+  "homepage": "https://github.com/dabd/claude-tmux-recovery",
+  "repository": "https://github.com/dabd/claude-tmux-recovery",
+  "license": "MIT",
+  "keywords": ["tmux", "claude-code", "session", "recovery", "hooks", "resurrect"]
+}

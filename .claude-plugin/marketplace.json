@@ -1,0 +1,16 @@
+{
+  "name": "claude-tmux-recovery",
+  "owner": {
+    "name": "dabd"
+  },
+  "description": "Recover Claude Code sessions after a tmux restart: record which session id runs in each pane, and map restored panes back to their sessions by position.",
+  "plugins": [
+    {
+      "name": "tmux-session-recovery",
+      "source": "./plugins/tmux-session-recovery",
+      "description": "A SessionStart hook stamps each tmux pane with its Claude session id and logs it by pane position, so after an unexpected tmux restart every restored window knows which session to resume, even when many sessions share one directory.",
+      "category": "productivity",
+      "tags": ["tmux", "claude-code", "session", "recovery", "hooks"]
+    }
+  ]
+}
