@@ -2,6 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+## As-built status (2026-06-26)
+
+**Task 1 (capture) is DONE, delivered as a Claude Code plugin, not manual settings.json edits.** The plan below predates that decision; prefer this note where they conflict.
+
+- The capture half ships as the `tmux-session-recovery` plugin in this repo (`plugins/tmux-session-recovery/`): a `SessionStart` hook in `hooks/hooks.json` runs `scripts/record-tmux-session.sh`. Installed via `claude plugin install tmux-session-recovery@claude-tmux-recovery`. Verified live: a real session logged its id, and the id resolves to a resumable `.jsonl`.
+- **Superseded specifics:** the plan's manual registration in `~/.claude/settings.json` and the script at `~/.config/claude-hooks/record-tmux-session.sh` are NOT how it was built (both were backed out). The plugin carries the hook, so there is no per-machine settings.json edit. The script lives in the plugin at `plugins/tmux-session-recovery/scripts/`.
+- **Still correct from the plan below:** the record-at-birth architecture, positional keys, reading `session_id`/`cwd` from stdin, verbatim cwd, and the no-op-outside-tmux guard. The script honors `TMUX_CLAUDE_LOG` to override the log path.
+- **`CLAUDE_CONFIG_DIR`:** enable the plugin in each config dir (work `~/.claude` and personal `~/.claude-personal`) separately; config dirs are isolated.
+
+**Task 2 (recovery: resurrect sidecar + reader) is still TODO** and depends on the dotfiles tmux port landing (the `@resurrect-hook-post-save-all` line lives in dotfiles' managed `tmux/tmux.conf`; the recovery reader can live here in the plugin). The README documents the resurrect wiring.
+
 **Goal:** Automatically record which Claude Code session id runs in each tmux pane, so that after an unexpected tmux restart every restored window knows exactly which session to `claude --resume`, even when many sessions share one working directory.
 
 **Architecture:** Record at *birth*, not at death. A tmux hook cannot read a dead pane's environment (the hook runs in the server, the env died with the pane), and a shell trap will not fire on SIGKILL, so capturing "when a session gets killed" is unreliable. Instead a Claude Code `SessionStart` hook fires when a session starts or resumes and (a) stamps the live session id onto the pane as a tmux user option `@claude_session_id`, and (b) appends an immutable row to a persistent log keyed by pane *position*. A tmux-resurrect `post-save-all` hook snapshots all panes' positions + ids to a sidecar aligned with each resurrect save. After a restart, a recovery reader matches restored panes to ids by position.
