@@ -11,7 +11,11 @@
 - **Still correct from the plan below:** the record-at-birth architecture, positional keys, reading `session_id`/`cwd` from stdin, verbatim cwd, and the no-op-outside-tmux guard. The script honors `TMUX_CLAUDE_LOG` to override the log path.
 - **`CLAUDE_CONFIG_DIR`:** enable the plugin in each config dir (work `~/.claude` and personal `~/.claude-personal`) separately; config dirs are isolated.
 
-**Task 2 (recovery: resurrect sidecar + reader) is still TODO** and depends on the dotfiles tmux port landing (the `@resurrect-hook-post-save-all` line lives in dotfiles' managed `tmux/tmux.conf`; the recovery reader can live here in the plugin). The README documents the resurrect wiring.
+**Task 2 (recovery: resurrect sidecar + reader) is DONE**, and it does NOT depend on the dotfiles tmux port (that earlier claim was wrong). Both scripts live in the plugin: `scripts/tmux-claude-snapshot.sh` (the resurrect `post-save-all` hook) and `scripts/tmux-claude-recover.sh` (the reader). The only tmux-config piece is one `@resurrect-hook-post-save-all` line, wired into the live `~/.tmux.conf` now and portable to the managed `tmux/tmux.conf` later. Verified against the running server: a real resurrect save wrote 26 panes to the sidecar; the reader mapped each to the correct `claude --resume <id>`.
+
+**Two bugs found and fixed during the build (do not regress):**
+- tmux format strings do NOT expand `\t`; it stays a literal backslash-t. The scripts build the format with real tab bytes via `$'\t'`. The inline-one-liner README version was wrong.
+- resurrect's `execute_hook` runs the hook value with `eval` in a plain shell, NOT via tmux. So the hook value must be a plain shell command (the script path), not `run-shell "..."`.
 
 **Goal:** Automatically record which Claude Code session id runs in each tmux pane, so that after an unexpected tmux restart every restored window knows exactly which session to `claude --resume`, even when many sessions share one working directory.
 

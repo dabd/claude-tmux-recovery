@@ -21,13 +21,15 @@ The [plugin README](plugins/tmux-session-recovery/README.md) covers how it works
 
 The plugin captures the mapping. Recovery pairs it with [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect).
 
-1. Snapshot each pane's id alongside every resurrect save. In `tmux.conf`:
+1. Snapshot each pane's id alongside every resurrect save. resurrect runs the hook value with `eval` in a plain shell, so point it at the snapshot script directly (not `run-shell`). In `tmux.conf`:
 
    ```tmux
-   set -g @resurrect-hook-post-save-all 'tmux list-panes -a -F "#{session_name}\t#{window_index}\t#{pane_index}\t#{window_name}\t#{@claude_session_id}" | grep -v "\t$" > ~/.local/share/tmux/resurrect/claude-ids.last'
+   set -g @resurrect-hook-post-save-all '"$HOME/path/to/claude-tmux-recovery/plugins/tmux-session-recovery/scripts/tmux-claude-snapshot.sh"'
    ```
 
-2. After a restart, read the sidecar to print `claude --resume <id>` per restored pane. The plugin's append log is the fallback. Match by position `(session_name, window_index, pane_index)`, with `window_name` as a tiebreak.
+   The script builds the format with real tab bytes and drops panes with no id. A `\t` in a tmux format string stays literal, so the inline one-liner version does not work.
+
+2. After a restart, run `scripts/tmux-claude-recover.sh` to print `claude --resume <id>` per restored pane. It reads the sidecar first, then falls back to the plugin's append log. Match is by position `(session_name, window_index, pane_index)`, with `window_name` as a tiebreak.
 
 Worst-case staleness is the resurrect save interval. The append log closes the gap for a session born and killed between saves.
 

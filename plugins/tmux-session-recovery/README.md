@@ -45,7 +45,13 @@ Outside tmux the hook is a no-op and exits 0. It never blocks a session start.
 
 ## Recovery after a restart
 
-The capture half is this plugin. tmux-resurrect closes the loop. A `@resurrect-hook-post-save-all` line snapshots each pane's id alongside the resurrect save. A reader maps restored panes back to `claude --resume <id>` by position. The repository README has the resurrect wiring.
+The capture half is this plugin. tmux-resurrect closes the loop.
+
+`scripts/tmux-claude-snapshot.sh` runs at every resurrect save. It writes each pane's id by position to `~/.local/share/tmux/resurrect/claude-ids.last`. Wire it as the `@resurrect-hook-post-save-all` hook (see the repository README).
+
+`scripts/tmux-claude-recover.sh` runs after a restart. It prints `claude --resume <id>` per restored pane, matched by position, with the append log as a fallback.
+
+Both honor `TMUX_CLAUDE_SIDECAR` to override the sidecar path. Default `~/.local/share/tmux/resurrect/claude-ids.last`.
 
 ## License
 
