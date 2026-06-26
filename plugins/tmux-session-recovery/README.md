@@ -1,50 +1,30 @@
 # tmux-session-recovery
 
-Record which Claude Code session id runs in each tmux pane, so an unexpected
-tmux restart no longer loses the mapping. After a restart you can resume each
-window with the session it was running, even when many sessions share one
-working directory.
+Record which Claude Code session id runs in each tmux pane. An unexpected tmux restart no longer loses the mapping. After a restart you resume each window with the session it was running, even when many sessions share one directory.
 
 ## The problem
 
-When you run several `claude` sessions across tmux windows and the tmux server
-dies (crash, reboot, accidental `kill-server`), you lose which session id ran in
-which window. Recovering it by hand means tracing logs. Matching by working
-directory does not help if you run many sessions in the same directory: they all
-share one `~/.claude/projects/<dir>/` folder.
+You run several `claude` sessions across tmux windows. The server dies: a crash, a reboot, an accidental `kill-server`. You lose which session id ran in which window.
+
+Tracing logs by hand recovers it slowly. Matching by working directory fails when many sessions share a directory. They all land in one `~/.claude/projects/<dir>/` folder.
 
 ## How it works
 
-Recording happens at session start, not at kill time. A tmux hook cannot read a
-dead pane's environment, and a shell trap does not fire on a hard kill, so
-capturing "when the session ends" is unreliable. Instead a Claude Code
-`SessionStart` hook fires when a session starts or resumes and does two things:
+Recording happens at session start, not at kill time. A tmux hook cannot read a dead pane's environment. A shell trap does not fire on a hard kill. Capturing "when the session ends" is unreliable, so a Claude Code `SessionStart` hook fires on start or resume and does two things:
 
-1. Stamps the live session id onto the pane as the tmux option
-   `@claude_session_id` (queryable from the tmux server).
-2. Appends one row to `~/.local/share/tmux/claude-sessions.log`, keyed by pane
-   position (`session_name`, `window_index`, `pane_index`, `window_name`) plus
-   the working directory. Position is the key that survives a restart, which is
-   what makes recovery work when several sessions share a directory.
+1. Stamps the session id onto the pane as the tmux option `@claude_session_id`, queryable from the tmux server.
+2. Appends one row to `~/.local/share/tmux/claude-sessions.log`, keyed by pane position (`session_name`, `window_index`, `pane_index`, `window_name`) plus the working directory. Position is the key that survives a restart. That is what recovers the mapping when several sessions share a directory.
 
-The session id comes from the hook's stdin JSON (`session_id`). The working
-directory is stored verbatim; it is not turned into a Claude projects slug
-(Claude replaces both `/` and `.` with `-`, so reconstructing the slug is
-error-prone).
+The session id comes from the hook's stdin JSON (`session_id`). The working directory is stored verbatim, never turned into a Claude projects slug. Claude replaces both `/` and `.` with `-`, so reconstructing the slug is error-prone.
 
 ## Install
-
-This plugin ships in the `claude-tmux-recovery` marketplace. Add the marketplace
-and enable the plugin:
 
 ```
 /plugin marketplace add dabd/claude-tmux-recovery
 /plugin install tmux-session-recovery@claude-tmux-recovery
 ```
 
-If you run more than one Claude config via `CLAUDE_CONFIG_DIR` (for example a
-work `~/.claude` and a personal `~/.claude-personal`), enable the plugin in each:
-config dirs are isolated, so a plugin enabled in one does not apply to the other.
+Run more than one Claude config via `CLAUDE_CONFIG_DIR`, say a work `~/.claude` and a personal `~/.claude-personal`? Enable the plugin in each. Config dirs are isolated. A plugin enabled in one does not apply to the other.
 
 ## Verify
 
@@ -57,19 +37,15 @@ tmux show -p @claude_session_id          # -> @claude_session_id test-uuid-1234
 tail -1 ~/.local/share/tmux/claude-sessions.log
 ```
 
-Outside tmux the hook is a no-op and exits 0, so it never blocks a session start.
+Outside tmux the hook is a no-op and exits 0. It never blocks a session start.
 
 ## Configuration
 
-- `TMUX_CLAUDE_LOG` overrides the log path (default
-  `~/.local/share/tmux/claude-sessions.log`).
+- `TMUX_CLAUDE_LOG` overrides the log path. Default `~/.local/share/tmux/claude-sessions.log`.
 
 ## Recovery after a restart
 
-The capture half is this plugin. Pairing it with tmux-resurrect closes the loop:
-a `@resurrect-hook-post-save-all` line snapshots each pane's id alongside the
-resurrect save, and a reader maps restored panes back to `claude --resume <id>`
-by position. See the repository README for the resurrect wiring.
+The capture half is this plugin. tmux-resurrect closes the loop. A `@resurrect-hook-post-save-all` line snapshots each pane's id alongside the resurrect save. A reader maps restored panes back to `claude --resume <id>` by position. The repository README has the resurrect wiring.
 
 ## License
 
