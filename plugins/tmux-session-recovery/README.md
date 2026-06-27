@@ -47,11 +47,13 @@ Outside tmux the hook is a no-op and exits 0. It never blocks a session start.
 
 The capture half is this plugin. tmux-resurrect closes the loop.
 
-`scripts/tmux-claude-snapshot.sh` runs at every resurrect save. It writes each pane's id by position to `~/.local/share/tmux/resurrect/claude-ids.last`. Wire it as the `@resurrect-hook-post-save-all` hook (see the repository README).
+`scripts/tmux-agent-snapshot.sh` runs at every resurrect save. It writes each pane's id by position to `~/.local/share/tmux/resurrect/agent-ids.last`. Wire it as the `@resurrect-hook-post-save-all` hook (see the repository README).
 
-`scripts/tmux-claude-recover.sh` runs after a restart. It prints `claude --resume <id>` per restored pane, matched by position, with the append log as a fallback.
+`scripts/tmux-agent-recover.sh` runs after a restart. It prints the resume command per restored pane, matched by position, with the append log as a fallback.
 
-Both honor `TMUX_CLAUDE_SIDECAR` to override the sidecar path. Default `~/.local/share/tmux/resurrect/claude-ids.last`.
+The scripts are agent-neutral. A pane is recovered if it carries `@agent_session_id` (with `@agent_kind`, default `claude`), or the legacy `@claude_session_id` the SessionStart hook sets. The reader dispatches by kind: `claude --resume <id>` or `codex resume <id>`.
+
+Both honor `TMUX_AGENT_SIDECAR` to override the sidecar path. Default `~/.local/share/tmux/resurrect/agent-ids.last`.
 
 ## License
 

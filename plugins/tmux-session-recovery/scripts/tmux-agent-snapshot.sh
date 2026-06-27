@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# tmux-resurrect post-save-all hook. Snapshots each pane's AI-agent session id by
+# position, alongside the resurrect save, so a restored pane can find which
+# session it was running. Panes with no session id are dropped.
+#
+# Agent-neutral. A pane is recorded if it carries either:
+#   @agent_session_id  (+ optional @agent_kind, default "claude")  -- preferred
+#   @claude_session_id (legacy, set by the Claude SessionStart hook) -- kind "claude"
+#
+# Wire it in tmux.conf (resurrect runs the value with eval in a plain shell, so
+# point at the script directly, NOT via run-shell):
+#   set -g @resurrect-hook-post-save-all '"/path/to/tmux-agent-snapshot.sh"'
+set -euo pipefail
+
+out="${TMUX_AGENT_SIDECAR:-${TMUX_CLAUDE_SIDECAR:-$HOME/.local/share/tmux/resurrect/agent-ids.last}}"
+mkdir -p "$(dirname "$out")" 2>/dev/null || true
+
+tab=$'\t'
+# Columns: session_name, window_index, pane_index, window_name, agent_kind, session_id
+# Prefer @agent_session_id/@agent_kind; fall back to the legacy @claude_session_id.
+fmt="#{session_name}${tab}#{window_index}${tab}#{pane_index}${tab}#{window_name}${tab}"
+fmt+="#{?@agent_kind,#{@agent_kind},claude}${tab}"
+fmt+="#{?@agent_session_id,#{@agent_session_id},#{@claude_session_id}}"
+
+# Keep only panes whose resolved session id (last field) is non-empty.
+tmux list-panes -a -F "$fmt" | awk -F'\t' 'NF==6 && $6 != "" { print }' > "$out"
